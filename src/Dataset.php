@@ -20,6 +20,7 @@ class Dataset
 
     public function addRow($row)
     {
+        $row = (array) $row;
         $aggregates = [];
 
         foreach ($this->aggregates as $aggregate) {
@@ -39,10 +40,24 @@ class Dataset
 
     protected function formatRow($aggregates, $row)
     {
-        $row = [array_pop($aggregates) => $row];
+        $aggregate = array_pop($aggregates);
+
+        $row = is_numeric($aggregate)
+            ? $this->numKeyToString($aggregate, $row)
+            : [$aggregate => $row];
+
         if (empty($aggregates)) return $row;
 
         return $this->formatRow($aggregates, $row);
+    }
+
+    protected function numKeyToString($key, $item)
+    {
+        $o = new \StdClass();
+        $o->{$key} = $item;
+        $item = (array) $o;
+
+        return $item;
     }
 
     public function toArray()
