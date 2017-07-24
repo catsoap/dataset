@@ -10,7 +10,7 @@ class DataSetTest extends \PHPUnit\Framework\TestCase
     /**
      * @dataProvider providerDataset
      */
-    public function testToArray($aggregates, $rows, $expected)
+    public function testToArray($rows, $aggregates, $expected)
     {
         $ds = new Dataset($aggregates);
 
@@ -23,46 +23,35 @@ class DataSetTest extends \PHPUnit\Framework\TestCase
 
     public function providerDataset()
     {
-        $rows = $expected = [];
-        for ($i=1;$i<=10;$i++) {
-            $row = (object) $this->getRow(1);
-            $rows[] = $row;
+        $ret = [];
+        for ($j=1; $j<=5;$j++) {
+            $rows = $expected = [];
+            for ($i=1;$i<=10;$i++) {
+                $aggregates = $this->getAggregates($j);
+                $row = (object) $this->getRow($aggregates);
 
-            if (!isset($expected[$row->aggregate1])) {
-                $expected[$row->aggregate1] = [];
+                $rows[] = $row;
+
+                $aggregates = array_keys($aggregates);
+                $current = &$expected;
+                foreach ($aggregates as $aggregate) {
+                    $current = &$current[(string) $row->{$aggregate}];
+                }
+
+                $current['metric1'][] = $row->metric1;
+                $current['metric2'][] = $row->metric2;
+                $current['metric3'][] = $row->metric3;
             }
 
-            if (!isset($expected[$row->aggregate1]['metric1'])) {
-                $expected[$row->aggregate1]['metric1'] = [];
-            }
-
-            if (!isset($expected[$row->aggregate1]['metric2'])) {
-                $expected[$row->aggregate1]['metric2'] = [];
-            }
-
-            if (!isset($expected[$row->aggregate1]['metric3'])) {
-                $expected[$row->aggregate1]['metric3'] = [];
-            }
-
-            $expected[$row->aggregate1]['metric1'][] = $row->metric1;
-            $expected[$row->aggregate1]['metric2'][] = $row->metric2;
-            $expected[$row->aggregate1]['metric3'][] = $row->metric3;
+            $ret[sprintf('%d aggregates', $j)] = [$rows, $aggregates, $expected];
         }
 
-        foreach($expected as &$metrics) {
-             foreach ($metrics as &$metric) {
-                 if (1 === count($metric)) {
-                     $metric = array_pop($metric);
-                 }
-             }
-        }
-
-        return [[['aggregate1'], $rows, $expected]];
+        return $ret;
     }
 
-    protected function getRow($numAggregates)
+    protected function getRow($aggregates)
     {
-        return array_merge($this->getAggregates($numAggregates), [
+        return array_merge($aggregates, [
             'metric1'    => rand(1, 55),
             'metric2'    => rand(1, 55),
             'metric3'    => rand(1, 55),
