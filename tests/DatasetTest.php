@@ -3,7 +3,7 @@
 use Ekino\Dataset;
 use PHPUnit\Framework\Constraint\IsType;
 
-class DataSetTest extends \PHPUnit\Framework\TestCase
+class DatasetTest extends \PHPUnit\Framework\TestCase
 {
     private static $day = 1;
 
@@ -12,11 +12,16 @@ class DataSetTest extends \PHPUnit\Framework\TestCase
      */
     public function testToArray($rows, $aggregates, $expected)
     {
-        $ds = new Dataset($aggregates);
+        $ds = new Dataset();
+
+        $ds->setAggregates($aggregates);
 
         foreach ($rows as $row) {
-            $ds->addRow($row);
+            $ds->addRow((array) $row);
         }
+
+        $keysList = $ds->getAggregatedKeys((array) $row);
+        //$ds->formatValues($keysList, 'array_sum');
 
         $this->assertEquals($expected, $ds->toArray());
     }
@@ -28,9 +33,7 @@ class DataSetTest extends \PHPUnit\Framework\TestCase
             $rows = $expected = [];
             for ($i=1;$i<=10;$i++) {
                 $aggregates = $this->getAggregates($j);
-                $row = (object) $this->getRow($aggregates);
-
-                $rows[] = $row;
+                $rows[] = $row = (object) $this->getRow($aggregates);
 
                 $aggregates = array_keys($aggregates);
                 $current = &$expected;
@@ -43,7 +46,9 @@ class DataSetTest extends \PHPUnit\Framework\TestCase
                 $current['metric3'][] = $row->metric3;
             }
 
-            $ret[sprintf('%d aggregates', $j)] = [$rows, $aggregates, $expected];
+            $this->formatValues($expected, ['metric1', 'metric2', 'metric3']);
+
+            $ret[sprintf('nb aggregates: %d', $j)] = [$rows, $aggregates, $expected];
         }
 
         return $ret;
@@ -62,8 +67,8 @@ class DataSetTest extends \PHPUnit\Framework\TestCase
     {
         $aggregates = [
             'aggregate1' => '2017-07-' . str_pad($this->getDay(), 2, '0', STR_PAD_LEFT),
-            'aggregate2' => range(1,10)[rand(0,9)],
-            'aggregate3' => range(1,23)[rand(0,22)],
+            'aggregate2' => ['foo', 'bar', 'baz', 'bal', 'buz', 'bli'][rand(0,5)],
+            'aggregate3' => ['foo', 'bar', 'baz', 'bal', 'buz', 'bli'][rand(0,5)],
             'aggregate4' => ['foo', 'bar', 'baz', 'bal', 'buz', 'bli'][rand(0,5)],
             'aggregate5' => ['didi', 'dudu', 'dada', 'dodo', 'dede'][rand(0, 4)],
         ];
@@ -77,15 +82,27 @@ class DataSetTest extends \PHPUnit\Framework\TestCase
 
     protected function getDay()
     {
-        return rand(0,1) ? ++static::$day : static::$day;
+        return static::$day = (static::$day > 0 && static::$day <= 30) ? ++static::$day : 1;
     }
 
     public function testFormatRow() {
-        $ds = new Dataset(['whatever']);
+        $ds = new Dataset();
 
-        $row = $this->invokeMethod($ds, 'formatRow', [[123], 0]);
-        $keys = array_flip($row);
+        $row = $this->invokeMethod($ds, 'formatRow', [[321], [123]]);
+        $keys = array_keys($row);
         $this->assertInternalType(IsType::TYPE_STRING, $keys[0]);
+    }
+
+    protected function formatValues(&$element, $keyList) {
+        foreach($element as $key => &$value) {
+            if( in_array( $key, $keyList) ) {
+                if ($key && (1 === count($value))) {
+                    $value = array_pop($value);
+                }
+            } else {
+                $this->formatValues($value, $keyList);
+            }
+        }
     }
 
     /**

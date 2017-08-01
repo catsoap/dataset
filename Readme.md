@@ -52,3 +52,5 @@ We should get this:
 ```
 
 Here the metrics are summed, but it should be allowed to provide an aggregate function
+
+@todo tests with raw dumb data
